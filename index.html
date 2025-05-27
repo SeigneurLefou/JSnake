@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>JSnake</title>
+    <style>
+    </style>
+</head>
+<body>
+    <h3>Score : <span id='score'>0</span></h3>
+    <canvas id='gameScreen'></canvas>
+    <canvas id='debugScreen'></canvas>
+    <script>
+        // Class
+        class Case {
+            constructor(iS = false, iA = false) { // iA isn't an artificial intelligence ;D
+                this.isSnake = iS;
+                this.isApple = iA;
+            }
+        }
+
+        // Function
+        function endGame(game) {
+            game["endGame"] = true;
+        }
+
+        function searchCase(x, y, height) {
+            return y*(height)+x;
+        }
+        function inverseSearchCase(i, height) {
+            const y = Math.floor(i/height);
+            const x = i % height;
+            return [x, y];
+        }
+
+        function appleSummoning(apple, snake, game) {
+            let freeCase = [];
+            let luckyCase;
+            for (let x = 0; x < game['width']; x++) {
+                for (let y = 0; y < game['height']; y++) {
+                    if(game['screen'][searchCase(x, y, game['height'])].isApple == false && game['screen'][searchCase(x, y, game['height'])].isSnake == false) {
+                        freeCase.push([x, y]);
+                    }
+                }
+            }
+            if (freeCase.length > 0) {
+                luckyCase = freeCase[Math.floor(Math.random() * freeCase.length)];
+                apple['apples'].push(luckyCase);
+                game['screen'][searchCase(luckyCase[0], luckyCase[1], game['height'])].isApple = true;
+            }
+        }
+        function appleDestruction(apple, snake, game) {
+            let tmp;
+            for (let i = apple['apples'].length - 1; i >= 0; i--) {
+                if (apple['apples'][i][0] === snake['x'] && apple['apples'][i][1] === snake['y']) {
+                    tmp = apple['apples'].splice(i, 1);
+                    game['screen'][searchCase(tmp[0][0], tmp[0][1], game['height'])].isApple = false;
+                    snake['length'] += 1;
+                    snake['eatApple'] += 1;
+                }
+            }
+        }
+        function appleWorld(apple, snake, game) {
+            appleSummoning(apple, snake, game);
+            appleDestruction(apple, snake, game);
+        }
+
+        function cutSnake(snake, game) {
+            if(snake["length"] <= snake['snakeBody'].length) {
+                const queue = snake['snakeBody'].shift();
+                game['screen'][searchCase(queue[0], queue[1], game['height'])].isSnake = false;
+            }
+            game['screen'][searchCase(snake['x'], snake['y'], game['height'])].isSnake = true;
+            snake['snakeBody'].push([snake['x'], snake['y']]);
+        }
+	function updateScore(snake) {
+        let scoreSpan = document.getElementById('score');
+        scoreSpan.innerHTML = snake['eatApple'];
+	}
+        function Move(snake, apple, game) {
+            switch(snake['dir']) {
+                case 0:
+                    if(snake['y'] <= 0 || game['screen'][searchCase(snake['x'], snake['y']-1, game['height'])].isSnake) {
+                        endGame(game);
+                        return [snake, apple, game];
+                    } else if(game['screen'][searchCase(snake['x'], snake['y']-1, game['height'])].isApple) {
+                        cutSnake(snake, game);
+                        game['screen'][searchCase(snake['x'], snake['y'], game['height'])].isApple = false;
+                        snake['y']--;
+                        appleWorld(apple, snake, game)
+                        return [snake, apple, game];
+                    } else {
+                        cutSnake(snake, game);
+                        snake['y']--;
+                        return [snake, apple, game];
+                    }
+                case 1:
+                    if(snake['x'] >= game['width'] - 1 || game['screen'][searchCase(snake['x']+1, snake['y'], game['width'])].isSnake) {
+                        endGame(game);
+                        return [snake, apple, game];
+                    } else if(game['screen'][searchCase(snake['x']+1, snake['y'], game['height'])].isApple) {
+                        cutSnake(snake, game);
+                        game['screen'][searchCase(snake['x'], snake['y'], game['height'])].isApple = false;
+                        snake['x']++;
+                        appleWorld(apple, snake, game)
+                        return [snake, apple, game];
+                    } else {
+                        cutSnake(snake, game);
+                        snake['x']++;
+                        return [snake, apple, game];
+                    }
+                case 2:
+                    if(snake['y'] >= game['height'] - 1 || game['screen'][searchCase(snake['x'], snake['y']+1, game['height'])].isSnake) {
+                        endGame(game);
+                        return [snake, apple, game];
+                    } else if(game['screen'][searchCase(snake['x'], snake['y']+1, game['height'])].isApple) {
+                        cutSnake(snake, game);
+                        game['screen'][searchCase(snake['x'], snake['y'], game['height'])].isApple = false;
+                        snake['y']++;
+                        appleWorld(apple, snake, game)
+                        return [snake, apple, game];
+                    } else {
+                        cutSnake(snake, game);
+                        snake['y']++;
+                        return [snake, apple, game];
+                    }
+                case 3:
+                    if(snake['x'] <= 0 || game['screen'][searchCase(snake['x']-1, snake['y'], game['width'])].isSnake) {
+                        endGame(game);
+                        return [snake, apple, game];
+                    } else if(game['screen'][searchCase(snake['x']-1, snake['y'], game['height'])].isApple) {
+                        cutSnake(snake, game);
+                        game['screen'][searchCase(snake['x'], snake['y'], game['height'])].isApple = false;
+                        snake['x']--;
+                        appleWorld(apple, snake, game)
+                        return [snake, apple, game];
+                    } else {
+                        cutSnake(snake, game);
+                        snake['x']--;
+                        return [snake, apple, game];
+                    }
+            }
+        }
+        function printGrass(game, ctx) {
+            let colorIndex = 0;
+            for (let y = 0; y < game['height']; y++) {
+                for (let x = 0; x < game['width']; x++) {
+                    if(colorIndex%2 == 0) {
+                        ctx.fillStyle = game['colors']['grass'][0];
+                    } else {
+                        ctx.fillStyle = game['colors']['grass'][1];
+                    }
+                    ctx.fillRect(x*game['case'], y*game['case'], game['case'], game['case']);
+                    colorIndex++;
+                }
+                colorIndex++
+            }
+        }
+        function printSnake(game, snake, ctx) {
+            ctx.fillStyle = game['colors']['snake'][0];
+            ctx.fillRect(snake['x']*game['case'], snake['y']*game['case'], game['case'], game['case']);
+            ctx.fillStyle = game['colors']['snake'][1];
+            for (let i in snake['snakeBody']) {
+                ctx.fillRect(snake['snakeBody'][i][0]*game['case'], snake['snakeBody'][i][1]*game['case'], game['case'], game['case']);
+            }
+        }
+        function printApple(game, apple, ctx) {
+            ctx.fillStyle = game['colors']['apple']
+            for (let i in apple['apples']) {
+                ctx.fillRect(apple['apples'][i][0]*game['case'], apple['apples'][i][1]*game['case'], game['case'], game['case']);
+            }
+        }
+        function printGame(game, snake, apple, ctx, canvas) {
+            printGrass(game, ctx);
+            printSnake(game, snake, ctx);
+            printApple(game, apple, ctx);
+        }
+
+        // Init
+        let gameLoop = null;
+
+        let game = {
+            'width': 20,
+            'height': 20,
+            'case': 20,
+            'screen': new Array,
+            'appleNumber': 5,
+            'framerate': 150,
+            'endgame': false,
+            'colors': {
+                'grass': ['#6FD08C', '#4AC46F'],
+                'dirt': '#D8A47F',
+                'snake': ['#0f5457', '#0F7173'],
+                'apple': '#AF1B3F',
+                'text': '#0A122A',
+            },
+        };
+        for (let y = 0; y < game['height']; y++) {
+            for (let x = 0; x < game['width']; x++) {
+                game['screen'].push(new Case());
+            }
+        }
+
+        let theSnake = {
+            'x': Math.floor(game["width"]/2),
+            'y': Math.floor(game["height"]/2),
+            'dir': 1,
+            'length': 2,
+            'snakeBody': [],
+            'eatApple': 0,
+        }
+        theSnake['snakeBody'] = [[theSnake["x"]-2, theSnake["y"]], [theSnake["x"]-1, theSnake["y"]]]
+
+        game['screen'][searchCase(theSnake['x'], theSnake['y'], game['height'])].isSnake = true;
+        for (let i in theSnake['snakeBody']) {
+            game['screen'][searchCase(theSnake['snakeBody'][i][0], theSnake['snakeBody'][i][1], game['height'])].isSnake = true;
+        }
+
+        let theDrug = {
+            'apples': [],
+            'number': game['appleNumber'],
+        }
+
+        for (let i = 0; i < theDrug['number']; i++) {
+            appleSummoning(theDrug, theSnake, game);
+        }
+
+        const canvas = document.getElementById('gameScreen')
+        const ctx = canvas.getContext('2d');
+        canvas.width = game['width'] * game['case'];
+        canvas.height = game['height'] * game['case'];
+        // Game's loop
+        printGame(game, theSnake, theDrug, ctx, canvas);
+        document.addEventListener('keydown', (event) => {
+            switch(event.key) {
+                case "ArrowUp":
+                    if([1, 3].includes(theSnake['dir'])) {
+                        event.preventDefault();
+                        theSnake['dir'] = 0;
+                    }
+                    break;
+                case "ArrowRight":
+                    if([0, 2].includes(theSnake['dir'])) {
+                        event.preventDefault();
+                        theSnake['dir'] = 1;
+                    }
+                    break;
+                case "ArrowDown":
+                    if([1, 3].includes(theSnake['dir'])) {
+                        event.preventDefault();
+                        theSnake['dir'] = 2;
+                    }
+                    break;
+                case "ArrowLeft":
+                    if([0, 2].includes(theSnake['dir'])) {
+                        event.preventDefault();
+                        theSnake['dir'] = 3;
+                    }
+                    break;
+            }
+        });
+        gameLoop = setInterval(function() {
+            const tmp = Move(theSnake, theDrug, game);
+            theSnake = tmp[0];
+            theDrug = tmp[1];
+            game = tmp[2];
+            if(!game['endGame']) {
+                printGame(game, theSnake, theDrug, ctx, canvas);
+                updateScore(theSnake);
+            }
+        }, game['framerate']);
+    </script>
+</body>
+</html>
