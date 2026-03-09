@@ -11,13 +11,12 @@ const game = {
     height: 20,
     dcase: 10,
     screen: new Array,
-    napple: 5,
-    framerate: 120,
+    napple: 10,
+    framerate: 70,
     end: false,
     colors: {
         grass: ['#5FD08C', '#4AC46F'],
         dirt: ['#c49f2dff', '#a47f10ff'],
-        snake: ['#1f5457', '#0F7173'],
         apple: '#AF0B3F',
         text: '#1A122A'
     },
@@ -38,13 +37,7 @@ const snake = {
 }
 
 const apple = {
-	apples: [
-		[Math.max((game.width / 4 - 1) * 3, 0), Math.max(game.height / 2 - 1, 0)],
-		[Math.max((game.width / 4 - 1) * 3 - 2, 0), Math.max(game.height / 2 - 3, 0)],
-		[Math.max((game.width / 4 - 1) * 3 - 2, 0), Math.max(game.height / 2 + 1, 0)],
-		[Math.max((game.width / 4 - 1) * 3 + 2, 0), Math.max(game.height / 2 - 3, 0)],
-		[Math.max((game.width / 4 - 1) * 3 + 2, 0), Math.max(game.height / 2 + 1, 0)],
-	]
+	apples: new Array
 }
 
 const canvas = document.getElementById('game_screen')
@@ -68,70 +61,7 @@ for (let i = 0; i < snake.length - 1; i++)
 	game.screen[snake.body[i][1] * game.width + snake.body[i][0]].is_snake = true;
 
 for (let i = 0; i < game.napple; i++)
-	game.screen[apple.apples[i][1] * game.width + apple.apples[i][0]].is_apple = true;
-
-function print_grass(game, ctx)
-{
-    let color_index = 0;
-    for (let y = 0; y < game.height; y++)
-    {
-        for (let x = 0; x < game.width; x++)
-        {
-			ctx.fillStyle = game.colors.grass[color_index % 2];
-            ctx.fillRect(x*game.dcase, y*game.dcase, game.dcase + 1, game.dcase + 1);
-            color_index++;
-        }
-        color_index++;
-    }
-	color_index = 0;
-	for (let x = 0; x < game.width; x++)
-	{
-		ctx.fillStyle = game.colors.dirt[color_index % 2];
-		ctx.fillRect(x*game.dcase, game.height*game.dcase, game.dcase + 1, game.dcase + 1);
-		color_index++;
-	}
-
-}
-
-function print_snake_body_part(body_part, snake, index_body, game)
-{
-	const offset = Math.floor(game.dcase / 4);
-	const dbase = game.dcase - 2 * offset;
-	const normalized_index = ((Number(index_body))**2) / ((snake.body.length)**2);
-	const color_index = Math.floor((snake.colors.length - 1) * normalized_index) + 1;
-
-	ctx.fillStyle = snake.colors[color_index];
-	ctx.fillRect(body_part[0]*game.dcase + offset, body_part[1]*game.dcase + offset, dbase, dbase);
-}
-
-
-function print_snake(game, snake, ctx)
-{
-	const offset = Math.floor(game.dcase / 7);
-	const dbase = game.dcase - 2 * offset;
-
-	ctx.fillStyle = snake.colors[0];
-	ctx.fillRect(snake.x * game.dcase + offset, snake.y * game.dcase + offset, dbase, dbase);
-	for (let i in snake.body)
-		print_snake_body_part(snake.body[i], snake, i, game);
-}
-
-function print_apple(game, apple, ctx)
-{
-	const offset = Math.floor(game.dcase / 4);
-	const dbase = game.dcase - 2 * offset;
-
-	ctx.fillStyle = game.colors.apple
-	for (let i = 0; i < apple.apples.length; i++)
-		ctx.fillRect(apple.apples[i][0] * game.dcase + offset, apple.apples[i][1] * game.dcase + offset, dbase, dbase);
-}
-
-function print_game(game, snake, apple, ctx)
-{
-	print_grass(game, ctx);
-	print_snake(game, snake, ctx);
-	print_apple(game, apple, ctx);
-}
+    apple_summoning(apple, game);
 
 function press_arrow(event)
 {
@@ -193,6 +123,14 @@ function move_snake()
 		{
 			const queue = snake.body.pop();
 			game.screen[queue[1] * game.width + queue[0]].is_snake = false;
+		}
+		else
+		{
+            apple_destruction(apple, snake, game);
+            apple_summoning(apple, game);
+			snake.length++;
+			snake.score++;
+			update_score(snake);
 		}
 		print_game(game, snake, apple, ctx, canvas);
 	}

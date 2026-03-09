@@ -4,6 +4,14 @@ body {
 
 #container {
     display: flex;
+	flex-direction: column;
     justify-content: center;
     align-items: center;
+}
+
+.ui_style {
+	background-color: white;
+	border: 10px solid black;
+	border-radius: 20px;
+	padding: 20px;
 }
